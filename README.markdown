@@ -8,7 +8,7 @@ on-the-fly. With Sync, you can code without friction.
 ![Successful compilation image.](http://rusty.io.s3.amazonaws.com/sync/sync_01.png)
 
 What does "code without friction" mean? It means that with Sync running, you no
-longer need to worry about running `make`, or `c:l(Module)` again. Just write
+longer need to worry about running `make`, or `c:l(Module)` again. Write
 code, save the file, and watch as Erlang automatically detects your changes,
 recompiles the code, and reloads the module.
 
@@ -31,10 +31,14 @@ git clone git@github.com:rustyio/sync.git
 (cd sync; make)
 ```
 
-The recommended approach is to put sync in your $ERL_LIBS directory.
+The recommended approach is to put sync in your `$ERL_LIBS` directory.
 
 Then, go in the Erlang console of an application you are developing, run
-`sync:go().`. You can also start sync using `application:start(sync).`
+`sync:go().`. You can also start sync using `application:start(sync).` but this
+will require you to have `sync`'s dependencies started as well: `syntax_tools`
+and `compiler`.
+
+It's generally just recommended to do `sync:go().`
 
 Starting up:
 
@@ -72,7 +76,7 @@ Errors:
 You can stop the `sync` application entirely (wiping its internal state) with
 `sync:stop()`. You can then restart the application with a new state using `sync:go()`
 
-If, however, you just wish to pause `sync` so that it will not update anything
+If, however, you would rather pause `sync` so that it will not update anything
 during some period, you can pause the scanner with `sync:pause()`.  You might
 do this while upgrading you wish not to have immediately loaded until
 everything is complete. Calling `sync:go()` once again will unpause the scanner.
@@ -294,14 +298,14 @@ A post-hook can also be specified as a `{Module,Function}` tuple, which assumes
 
 ### Unregistering a post-hook
 
-To unregister a post-hook, just call
+To unregister a post-hook, call
 
 	sync:onsync(undefined).
 
 ## Whitelisting/Excluding modules from the scanning process
 
 Sometimes you may want to focus only on a few modules, or prevent some modules
-from being scanned by sync. To achive this just modify `whitelisted_modules` or
+from being scanned by sync. To achive this modify `whitelisted_modules` or
 `excluded_modules` configuration parameter in the
 [node's config file](http://www.erlang.org/doc/man/config.html).
 
@@ -334,12 +338,6 @@ config:
 
 * `ignore`: If a file is not a descendant, sync will completely ignore it.
 
-## A note about Nitrogen
-
-The `{sync_mode, nitrogen}` option is no longer necessary for users of the
-[Nitrogen Web Framework](http://nitrogenproject.com) and will be ignored. Sync
-works with Nitrogen without that option.
-
 ## Sample Configuration File
 
 Please note that sync loads with the following defaults:
@@ -359,21 +357,7 @@ Please note that sync loads with the following defaults:
 
 You can view a full sample configuration file
 ([sync.sample.config](https://github.com/rustyio/sync/blob/master/sync.sample.config))
-that you're free to include in your application. Just be sure to use the
+that you're free to include in your application. Remember to use the
 `-config` switch for the `erl` program:
 
 	erl -config sync.config
-
-## Sync with relx
-
-If you use [relx](https://github.com/erlware/relx) and wish to use sync with a
-relx created release, you'll need to run relx with -d option (symlink all
-applications and configuration into the release instead of copying) add a
-`syntax_tools` and `compiler` to `release` section to your relx.config file:
-
-```erlang
-{release, {your_app, "1.0.0"}, [
-	syntax_tools,
-	compiler
-]}.
-```

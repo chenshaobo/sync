@@ -451,11 +451,13 @@ erlydtl_compile(SrcFile, Options) ->
     Module =
         list_to_atom(
             lists:flatten(filename:basename(SrcFile, ".dtl") ++ "_dtl")),
-    erlydtl:compile(SrcFile, Module, DtlOptions).
+    Compiler = erlydtl,
+    Compiler:compile(SrcFile, Module, DtlOptions).
 
 elixir_compile(SrcFile, Options) ->
     Outdir = proplists:get_value(outdir, Options),
-    Modules = 'Elixir.Kernel.ParallelCompiler':files_to_path([list_to_binary(SrcFile)], list_to_binary(Outdir)),
+    Compiler = 'Elixir.Kernel.ParallelCompiler',
+    Modules = Compiler:files_to_path([list_to_binary(SrcFile)], list_to_binary(Outdir)),
     Loader = fun(Module) ->
         Outfile = code:which(Module),
         Binary = file:read_file(Outfile),
@@ -511,6 +513,13 @@ reload_if_necessary(CompileFun, SrcFile, Module, _OldBinary, _Binary, Options, W
     %% Try to load the module...
     case code:ensure_loaded(Module) of
         {module, Module} -> ok;
+        {error, nofile} ->
+            Msg =
+                [
+                    io_lib:format(
+                        "~p:0: Couldn't load module: nofile~n", [Module])
+                ],
+            sync_notify:log_warnings(Msg);
         {error, embedded} ->
             %% Module is not yet loaded, load it.
             case code:load_file(Module) of
