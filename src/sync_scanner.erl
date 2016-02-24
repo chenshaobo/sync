@@ -133,7 +133,19 @@ handle_cast(_, State) when State#state.paused==true ->
     {noreply, State};
 handle_cast(discover_modules, State) ->
     %% Get a list of all loaded non-system modules.
-    Modules = (erlang:loaded() -- sync_utils:get_system_modules()),
+%%     sync_notify:log_success(io_lib:format("~p",[application:get_env(sync,discover_app)])),
+    Modules = case application:get_env(sync,discover_app) of
+                  undefined->
+                      (erlang:loaded() -- sync_utils:get_system_modules());
+                  {ok,[_|_] = Apps} ->
+                      F = fun(App) ->
+                          case application:get_key(App, modules) of
+                              {ok, Modules} -> Modules;
+                              _Other -> []
+                          end
+                      end,
+                      lists:flatten([F(X) || X <- Apps])
+              end,
 
     %% Delete excluded modules/applications
     FilteredModules = filter_modules_to_scan(Modules),
@@ -183,7 +195,7 @@ handle_cast(compare_beams, State) ->
         {X, LastMod}
     end,
     NewBeamLastMod = lists:usort([F(X) || X <- State#state.modules]),
-
+    sync_notify:growl_success(io_lib:format("~p",[State#state.modules])),
     %% Compare to previous results, if there are changes, then reload
     %% the beam...
     process_beam_lastmod(State#state.beam_lastmod, NewBeamLastMod, State#state.patching),
@@ -721,6 +733,7 @@ module_matches(Module, [Pattern|T]) when is_list(Pattern) ->
 
 discover_source_dirs(State, ExtraDirs) ->
     %% Extract the compile / options / source / dir from each module.
+
     F = fun(X, Acc = {SrcAcc, HrlAcc}) ->
         %% Get the dir...
         case sync_utils:get_src_dir_from_module(X) of
